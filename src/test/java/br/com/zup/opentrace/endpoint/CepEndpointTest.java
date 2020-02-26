@@ -7,12 +7,13 @@ import br.com.zup.opentrace.exception.InvalidOutputFormatException;
 import br.com.zup.opentrace.service.CepService;
 import io.micrometer.core.instrument.util.StringUtils;
 import org.junit.Rule;
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpStatus;
@@ -22,20 +23,24 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.ResultMatcher;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.util.EnumSet;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.internal.bytebuddy.matcher.ElementMatchers.is;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
 @RunWith(SpringRunner.class)
-@AutoConfigureMockMvc
+@WebMvcTest(CepEndpoint.class)
 public class CepEndpointTest {
 
     @Autowired
@@ -86,7 +91,7 @@ public class CepEndpointTest {
     public void findCepByZipCodeWithValidZipAndValidFormat() throws Exception {
         when(cepService.findByZipCode(anyString(), anyString())).thenReturn(new ResponseEntity<>(ZUP_CODE_RESPONSE, HttpStatus.OK));
         when(cepService.findByZipCode(anyString(), isNull())).thenReturn(new ResponseEntity<>(ZUP_CODE_RESPONSE, HttpStatus.OK));
-        for (ViaCepResponses viaCepResponses : EnumSet.allOf(ViaCepResponses.class)){
+        for (ViaCepResponses viaCepResponses : EnumSet.allOf(ViaCepResponses.class)) {
             MvcResult result = invokeFindCep("38400386", viaCepResponses.getValue())
                     .andDo(print())
                     .andExpect(status().isOk())
@@ -95,35 +100,9 @@ public class CepEndpointTest {
         }
     }
 
-    @Test
-    public void findCepByZipCodeWithInValidZip() throws Exception {
-        when(cepService.findByZipCode(anyString(), anyString())).thenThrow(InvalidCepException.class);
-        when(cepService.findByZipCode(anyString(), isNull())).thenThrow(InvalidCepException.class);
-        exception.expect(InvalidCepException.class);
-        exception.expectMessage("CEP Informado inválido! ABCDEFGH");
-        MvcResult result = invokeFindCep("ABCDEFGH", "json")
-                .andDo(print())
-                .andExpect(status().isBadRequest())
-                .andReturn();
-        assertThat(result).isNotNull();
-    }
-
-    @Test
-    public void findCepByZipCodeWithValidZipButInvalidFormat() throws Exception {
-        when(cepService.findByZipCode(anyString(), anyString())).thenThrow(InvalidOutputFormatException.class);
-        when(cepService.findByZipCode(anyString(), isNull())).thenThrow(InvalidOutputFormatException.class);
-        exception.expect(InvalidOutputFormatException.class);
-        exception.expectMessage("Unknown output format: INVALIDFORMAT");
-        MvcResult result = invokeFindCep(VALID_ZIP_CODE, "INVALIDFORMAT")
-                .andDo(print())
-                .andExpect(status().isBadRequest())
-                .andReturn();
-        assertThat(result).isNotNull();
-    }
-
     private ResultActions invokeFindCep(String zipCode, String outputFormat) throws Exception {
         String address = "";
-        if (!StringUtils.isBlank(outputFormat)){
+        if (!StringUtils.isBlank(outputFormat)) {
             address = new StringBuilder(BASE_URL)
                     .append(zipCode)
                     .append("/")
