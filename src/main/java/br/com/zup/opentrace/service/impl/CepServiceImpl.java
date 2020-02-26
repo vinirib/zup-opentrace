@@ -24,7 +24,7 @@ public class CepServiceImpl implements CepService {
     public ResponseEntity<String> findByZipCode(String zipCode, String format) {
         String viacepFind  = viacepAddress;
         if (!zipCode.matches(CEP_FORMAT)) {
-            throw new InvalidCepException("CEP Informado inválido! " + zipCode);
+            throw new InvalidCepException("Invalid Brazillian ZipCode Format! " + zipCode);
         }
         if (!StringUtils.isBlank(format)){
             viacepFind = new StringBuilder(viacepAddress)
